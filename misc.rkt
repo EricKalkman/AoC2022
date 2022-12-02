@@ -3,13 +3,17 @@
 
 (provide
   load-file
+  load-file-as-list
   ->
   ->>
-  any->)
+  any->
+  sum)
 
 ; just gulp a file
 (define (load-file fname)
   (port->string (open-input-file fname) #:close? #t))
+(define (load-file-as-list fname)
+  (string->list (load-file fname)))
 
 ; threading macro; passes the result of one function as the first argument
 ; of the next
@@ -39,3 +43,6 @@
     [(_ value it (fn ...) others ...)
       #'(let [(it value)]
           (any-> (fn ...) it others ...))]))
+
+(define (sum lst)
+  (foldl + 0 lst))

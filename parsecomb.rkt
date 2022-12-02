@@ -25,6 +25,7 @@
   expect-empty
   expect-remaining
   expect-fn
+  expv-set
   expect-digit
   expect-whitespace
   skip-whitespace
@@ -198,7 +199,7 @@
 (define-nonempty-parser (expect-fn inp stack pred)
                (if (pred (car inp))
                  (values (cdr inp) (cons (car inp) stack))
-                 (values #f (format "Predicate failed: ~a" fn))))
+                 (values #f (format "Predicate failed: ~a" pred))))
 
 ; character sets
 (define DIGITS (string->list "0123456789"))
