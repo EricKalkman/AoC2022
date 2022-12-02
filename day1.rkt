@@ -8,14 +8,14 @@
 
 (define input-parser
   (at-least-one (at-least-one
-                  (and-then
+                  (and-then  ; parse elf
                     push-guard
                     (and-then
-                      (at-least-one
+                      (at-least-one  ; series of int separated by newlines
                         (and-then
                           expect-int
                           (skip (expv #\newline))))
-                      (or-else
+                      (or-else ; end each elf's inventory with blank line or EOF
                         (skip (expv #\newline))
                         expect-empty))
                     (mod-guarded-stack reverse)))))
