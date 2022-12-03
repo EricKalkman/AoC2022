@@ -8,8 +8,8 @@
 
 (define translate (hash #\A 'rock #\B 'paper #\C 'scissors #\X 'rock #\Y 'paper #\Z 'scissors))
 
-(define expect-op (and-then (expv-set (string->list "ABC"))))
-(define expect-you (and-then (expv-set (string->list "XYZ"))))
+(define expect-op (expv-set (string->list "ABC")))
+(define expect-you (expv-set (string->list "XYZ")))
 
 (define parse-input
   (at-least-one
