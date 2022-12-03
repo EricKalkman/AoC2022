@@ -7,7 +7,8 @@
   ->
   ->>
   any->
-  sum)
+  sum
+  chunkify)
 
 ; just gulp a file
 (define (load-file fname)
@@ -46,3 +47,11 @@
 
 (define (sum lst)
   (foldl + 0 lst))
+
+; breaks a list into groups of n
+; assumes (length lst) mod n is 0
+(define (chunkify n lst)
+  (if (null? lst)
+    '()
+    (let-values ([(head tail) (split-at lst n)])
+      (cons head (chunkify n tail)))))

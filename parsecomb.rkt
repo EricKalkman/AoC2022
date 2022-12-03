@@ -26,11 +26,22 @@
   expect-remaining
   expect-fn
   expv-set
+  expv-not-set
   expect-digit
+  expect-letter
   expect-whitespace
+  expect-line
+  skip-eol-or-eof
   skip-whitespace
   expect-int
-  run-parser)
+  run-parser
+
+  ; sets
+  DIGITS
+  UPCASE
+  LOCASE
+  LETTERS
+  WHITESPACE)
 
 ; defines a parser, taking symbols for input and stack bindings (see below) as well as any additional
 ; parameters
@@ -185,9 +196,9 @@
 ; Returns a parser that checks if x is the first element of the input list using the
 ; equality function eqfn. If so, consumes that element and places it on the stack
 (define-nonempty-parser (expect-val inp stack x eqfn)
-               (if (eqfn x (car inp))
-                 (values (cdr inp) (cons x stack))
-                 (values #f (format "Expected ~a, found ~a" x (car inp)))))
+                        (if (eqfn x (car inp))
+                          (values (cdr inp) (cons x stack))
+                          (values #f (format "Expected ~a, found ~a" x (car inp)))))
 
 ; expect-val using equal?, eqv?, or eq?, respectively, as equality operators
 (define (expect x) (expect-val x equal?))
@@ -206,6 +217,7 @@
 (define UPCASE (string->list "ABCDEFGHIJKLMNOPQRSTVUWXYZ"))
 (define LOCASE (string->list "abcdefghijklmnopqrstuvwxyz"))
 (define LETTERS (append UPCASE LOCASE))
+; sorry Windows
 (define WHITESPACE (string->list " \t\n"))
 
 ; Checks that the next element in the input is present in the list st. If so,
@@ -213,11 +225,23 @@
 ; Uses eqv? as the equality operator
 (define (expv-set st)
   (expect-fn (lambda (x) (memv x st))))
+(define (expv-not-set st)
+  (expect-fn (lambda (x) (not (memv x st)))))
 (define expect-digit
   (mod-err (expv-set DIGITS) "Expected a digit"))
+(define expect-letter
+  (mod-err (expv-set LETTERS) "Expected a letter"))
 (define expect-whitespace
   (mod-err (expv-set WHITESPACE) "Expected a whitespace character"))
 (define skip-whitespace (skip (at-least-none expect-whitespace)))
+(define skip-eol-or-eof (or-else (skip (expv #\newline)) expect-empty))
+
+(define expect-line
+  (and-then expect-remaining
+            push-guard
+            (at-least-none (expv-not-set '(#\newline)))
+            skip-eol-or-eof
+            (mod-guarded-stack reverse)))
 
 ; parses [-]?[0-9]+, and if it succeeds, pushes the parsed integer onto the stack
 (define expect-int
