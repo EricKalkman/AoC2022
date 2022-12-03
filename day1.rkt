@@ -31,3 +31,13 @@
            (sort x >)
            (take x 3)
            (foldl + 0 x))))
+
+; rethreaded using newe =>> operator, indicating to pass the threaded argument
+; to the form as the last argument instead of the first
+(define (part-2-rethreaded input)
+  (let-values ([(_ parsed) (run-parser input-parser input)])
+    (-> parsed
+        (=>> map (lambda (elf) (foldl + 0 elf)))
+        (sort >)
+        (take 3)
+        (=>> foldl + 0))))

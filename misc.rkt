@@ -19,15 +19,21 @@
 ; threading macro; passes the result of one function as the first argument
 ; of the next
 (define-syntax ->
-  (syntax-rules ()
+  (syntax-rules (=>>)
     [(-> val) val]
+    ; =>> makes it so that the threaded value is actually passed as the last
+    ; argument instead of the first
+    [(-> val (=>> fn args ...) others ...) (-> (fn args ... val) others ...)]
     [(-> val (fn args ...) others ...) (-> (fn val args ...) others ...)]
     [(-> val fn others ...) (-> (fn val) others ...)]))
 
 ; same as ->, but passes the result as the last argument of the next function
 (define-syntax ->>
-  (syntax-rules ()
+  (syntax-rules (<<=)
     [(->> val) val]
+    ; <<= makes it so that the threaded value is actually passed as the last
+    ; argument instead of the first
+    [(->> val (<<= fn args ...) others ...) (->> (fn val args ...) others ...)]
     [(->> val (fn args ...) others ...) (->> (fn args ... val) others ...)]
     [(->> val fn others ...) (->> (fn val) others ...)]))
 
