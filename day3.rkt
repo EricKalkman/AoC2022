@@ -29,10 +29,10 @@
 (define (part-1 inp)
   (let-values ([(_ parsed) (run-parser parse-input inp)])
     (->> parsed
-         (map (compose ; could have done this with a threading macro as well
+         (map (compose             ; could have done this with a threading macro as well
                 item-priority
-                car  ; shared-items should return a list with one element; unwrap
-                shared-items  ; shared items between two compartments
+                car                ; shared-items should return a list with one element; unwrap
+                shared-items       ; shared items between two compartments
                 (lambda (rucksack) ; split each rucksack into compartments
                   (call-with-values
                     (lambda () (split-at rucksack (/ (length rucksack) 2)))
