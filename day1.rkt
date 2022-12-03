@@ -3,8 +3,8 @@
 (require "misc.rkt")
 (require "parsecomb.rkt")
 
-(define test-inp (string->list (load-file "day1.test")))
-(define real-inp (string->list (load-file "day1.inp")))
+(define test-inp (string->list (load-file "inputs/day1.test")))
+(define real-inp (string->list (load-file "inputs/day1.inp")))
 
 (define input-parser
   (at-least-one (at-least-one

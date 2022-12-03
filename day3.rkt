@@ -12,8 +12,8 @@
 (define parse-input
   (at-least-one parse-rucksack))
 
-(define test-inp (load-file-as-list "day3.test"))
-(define real-inp (load-file-as-list "day3.inp"))
+(define test-inp (load-file-as-list "inputs/day3.test"))
+(define real-inp (load-file-as-list "inputs/day3.inp"))
 
 (define (shared-items rucksack)
   ; so apparently lists work as sets in racket
