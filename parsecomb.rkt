@@ -16,6 +16,7 @@
   and-then
   or-else
   maybe
+  group-output
   at-least-none
   at-least-one
   skip
@@ -130,7 +131,6 @@
                    (values i2 s2)
                    (values i2 msg))))
 
-
 ; returns a new parser that runs p1, and if it succeeds, passes its output to p2
 ; otherwise, returns p1's error
 (define-parser (and-then-2 inp stack p1 p2)
@@ -162,6 +162,14 @@
 ; Returns a new parser that runs p1, but returns unmodified input and stack if p1 fail
 (define (maybe p1)
   (or-else p1 nop))
+
+; Instead of putting the output of p directly onto the stack, groups the output
+; into a list and pushes that list onto the stack
+(define (group-output p)
+  (and-then
+    push-guard
+    p
+    (mod-guarded-stack reverse)))
 
 ; Returns a new parser that repeated evalutes p as many times as possible (minimum: 0 times).
 ; Cannot fail
