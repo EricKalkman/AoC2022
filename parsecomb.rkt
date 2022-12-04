@@ -34,6 +34,7 @@
   expect-line
   skip-eol-or-eof
   skip-whitespace
+  expect-natural
   expect-int
   run-parser
 
@@ -242,7 +243,10 @@
 (define expect-whitespace
   (mod-err (expv-set WHITESPACE) "Expected a whitespace character"))
 (define skip-whitespace (skip (at-least-none expect-whitespace)))
-(define skip-eol-or-eof (or-else (skip (expv #\newline)) expect-empty))
+(define skip-eol-or-eof
+  (mod-err
+    (or-else (skip (expv #\newline)) expect-empty)
+    "Expected newline or EOF"))
 
 (define expect-line
   (and-then expect-remaining
@@ -251,14 +255,23 @@
             skip-eol-or-eof
             (mod-guarded-stack reverse)))
 
-; parses [-]?[0-9]+, and if it succeeds, pushes the parsed integer onto the stack
-(define expect-int
+; parses [0-9]+, and if it succeeds, pushes the parsed integer onto the stack
+(define expect-natural
   (let [(guard (gensym))]
     (and-then
       (push-stack guard)
-      (maybe (expv #\-))
       (at-least-one expect-digit)
       (mod-stack-with-guard guard (lambda (slice) (-> slice reverse list->string string->number))))))
+
+; like expect-natural, but allows for negative numbers
+(define expect-int
+  (and-then
+    (maybe (expect #\-))
+    expect-natural
+    (mod-stack (lambda (stack)
+                 (if (and (not (null? (cdr stack))) (eqv? (cadr stack) #\-))
+                   `(,(- (car stack)) ,@(cddr stack))
+                   stack)))))
 
 ; maybe more error handling here at some point, IDK
 (define (run-parser p inp)
