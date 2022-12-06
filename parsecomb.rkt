@@ -5,6 +5,7 @@
 (provide
   define-parser
   define-nonempty-parser
+  pdebug
   nop
   push-stack
   push-guard
@@ -23,17 +24,22 @@
   expect
   expv
   expq
+  expect-n
   expect-empty
   expect-remaining
   expect-fn
   expv-set
   expv-not-set
   expect-digit
+  expect-uppercase
+  expect-lowercase
   expect-letter
   expect-whitespace
   expect-line
   skip-eol-or-eof
   skip-whitespace
+  expect-list
+  expect-string
   expect-natural
   expect-int
   run-parser
@@ -93,6 +99,12 @@
                 body ...))))
         (provide name))]))
 
+
+(define-syntax-rule (pdebug inp stack body ...)
+  (lambda (inp stack)
+    (begin
+      body ...
+      (values inp stack))))
 
 ; this parser does not do anything; useful for some combinators
 ; always succeeds
@@ -188,7 +200,14 @@
 ; runs a parser that consumes input but returns an unmodified stack
 (define-parser (skip inp stack p)
                (let-values ([(i2 s2) (p inp stack)])
-                 (values i2 stack)))
+                 (if i2
+                   (values i2 stack)
+                   (values i2 s2))))
+
+(define (expect-n p n)
+  (if (<= n 0)
+    nop
+    (and-then-2 p (expect-n p (- n 1)))))
 
 ; expects end of file (empty list as inp)
 (define-parser (expect-empty inp stack)
@@ -238,6 +257,10 @@
   (expect-fn (lambda (x) (not (memv x st)))))
 (define expect-digit
   (mod-err (expv-set DIGITS) "Expected a digit"))
+(define expect-uppercase
+  (mod-err (expv-set UPCASE) "Expected an uppercase letter"))
+(define expect-lowercase
+  (mod-err (expv-set LOCASE) "Expected a lowercase letter"))
 (define expect-letter
   (mod-err (expv-set LETTERS) "Expected a letter"))
 (define expect-whitespace
@@ -254,6 +277,15 @@
             (at-least-none (expv-not-set '(#\newline)))
             skip-eol-or-eof
             (mod-guarded-stack reverse)))
+
+(define (expect-list lst)
+  (mod-err
+    (apply and-then (map expect lst))
+    (format "Error when expecting ~a" lst)))
+(define (expect-string str)
+  (mod-err
+    (expect-list (string->list str))
+    (format "Error when expecting ~a" str)))
 
 ; parses [0-9]+, and if it succeeds, pushes the parsed integer onto the stack
 (define expect-natural
