@@ -11,7 +11,9 @@
   chunkify
   cart-product
   vector-foldl
-  vector-foldr)
+  vector-foldr
+  any
+  all)
 
 ; just gulp a file
 (define (load-file fname)
@@ -88,3 +90,15 @@
       (loop (- i 1)
             (fn (vector-ref vec i) acc)))))
 
+
+(define (any pred lst)
+  (cond
+    [(null? lst) #f]
+    [(pred (car lst)) #t]
+    [else (any pred) (cdr lst)]))
+
+(define (all pred lst)
+  (cond
+    [(null? lst) #t]
+    [(pred (car lst)) (all pred (cdr lst))]
+    [else #f]))

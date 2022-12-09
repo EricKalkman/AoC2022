@@ -22,6 +22,8 @@
   (let-values ([(_ parsed) (run-parser expect-input inp)])
     (list->vector parsed)))
 
+; -- initial part 1, using mutation in scheme
+
 ; pin-drop algorithm; from is either 'left or 'right
 ; upon encountering a taller tree, marks that tree as "seen"
 (define (expose-row row from)
@@ -76,7 +78,41 @@
                                        row)))
       (=>> vector-foldl + 0)))
 
+; --- revised part 1; much slower, but easier to understand
+
 ; coords are `(,row . ,col) pairs
+; given a starting coordinate ,src, return a list of lists of coordinates
+; reaching from src to the edge of the map. Each sublist extends along one of
+; the cardinal directions
+(define (coords-to-edge forest src)
+  (let ([height (vector-length forest)]
+        [width (vector-length (vector-ref forest 0))]
+        [src-row (car src)]
+        [src-col (cdr src)])
+    (list
+      (map cons (make-list src-col src-row) (range (sub1 src-col) -1 -1)) ; scan left
+      (map cons (make-list (- width src-col 1) src-row) (range (add1 src-col) width)) ; scan right
+      (map cons (range (sub1 src-row) -1 -1) (make-list src-row src-col)) ; scan up
+      (map cons (range (add1 src-row) height) (make-list (- height src-row 1) src-col))))) ; scan dow
+
+
+(define (visible-from-edge forest src)
+  (let* ([idxf (lambda (coord) (first (vector-ref (vector-ref forest (car coord)) (cdr coord))))]
+         [src-height (idxf src)])
+    (->> (coords-to-edge forest src)
+         (map (lambda (coords) (all (lambda (coord) (< (idxf coord) src-height)) coords)))
+         (foldl (lambda (a b) (or a b)) #f))))
+
+(define (part-1-revised inp)
+  (let* ([forest (parse-input inp)]
+         [height (vector-length forest)]
+         [width (vector-length (vector-ref forest 0))])
+    (->> (for/list ([row-idx (range height)])
+           (for/list ([col-idx (range width)])
+             (visible-from-edge forest (cons row-idx col-idx))))
+         flatten
+         (count (lambda (x) x)))))
+
 ; counts the number of trees that are shorter than that at ,src along the path defined
 ; by ,coords, stopping either at the edge or a same-height-or-taller tree. Also counts
 ; that last tallest tree, if applicable
@@ -92,19 +128,10 @@
          (if (null? remaining) 0 1))))) ; properly seeing past the edge
 
 ; Trace the cardinal directions around each tree to determine its scenic score
-(define (scenic-score forest coord)
-  (let ([height (vector-length forest)]
-        [width (vector-length (vector-ref forest 0))]
-        [src-row (car coord)]
-        [src-col (cdr coord)])
-    (->> (list
-           ; hooray, index hacking
-           (map cons (make-list src-col src-row) (range (sub1 src-col) -1 -1)) ; scan left
-           (map cons (make-list (- width src-col 1) src-row) (range (add1 src-col) width)) ; scan right
-           (map cons (range (sub1 src-row) -1 -1) (make-list src-row src-col)) ; scan up
-           (map cons (range (add1 src-row) height) (make-list (- height src-row 1) src-col))) ; scan down
-         (map (lambda (coords) (scenic-trace forest coord coords)))
-         (foldl * 1))))
+(define (scenic-score forest src)
+  (->> (coords-to-edge forest src)
+       (map (lambda (coords) (scenic-trace forest src coords)))
+       (foldl * 1)))
 
 ; no part of this code is efficient
 (define (part-2 inp)
