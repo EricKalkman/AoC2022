@@ -8,7 +8,10 @@
   ->>
   any->
   sum
-  chunkify)
+  chunkify
+  cart-product
+  vector-foldl
+  vector-foldr)
 
 ; just gulp a file
 (define (load-file fname)
@@ -61,3 +64,27 @@
     '()
     (let-values ([(head tail) (split-at lst n)])
       (cons head (chunkify n tail)))))
+
+(define (cart-product lst1 lst2)
+  (if (null? lst1)
+    '()
+    (append
+      (map (lambda (x) (cons (car lst1) x)) lst2)
+      (cart-product (cdr lst1) lst2))))
+
+(define (vector-foldl fn seed vec)
+  (let loop ([i 0]
+             [acc seed])
+    (if (>= i (vector-length vec))
+      acc
+      (loop (+ i 1)
+            (fn (vector-ref vec i) acc)))))
+
+(define (vector-foldr fn seed vec)
+  (let loop ([i (- (vector-length vec) 1)]
+             [acc seed])
+    (if (< i 0)
+      acc
+      (loop (- i 1)
+            (fn (vector-ref vec i) acc)))))
+
