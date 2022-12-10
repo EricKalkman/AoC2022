@@ -15,8 +15,8 @@
                                                  string->number
                                                  string) lst))))))))
 
-(define test-inp (load-file-as-list "inputs/day8.test"))
-(define real-inp (load-file-as-list "inputs/day8.inp"))
+(define test-inp (load-file-as-list "inputs/day08.test"))
+(define real-inp (load-file-as-list "inputs/day08.inp"))
 
 (define (parse-input inp)
   (let-values ([(_ parsed) (run-parser expect-input inp)])

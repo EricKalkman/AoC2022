@@ -3,8 +3,8 @@
 (require "misc.rkt")
 (require "parsecomb.rkt")
 
-(define test-inp (string->list (string-trim (load-file "inputs/day6.test"))))
-(define real-inp (string->list (string-trim (load-file "inputs/day6.inp"))))
+(define test-inp (string->list (string-trim (load-file "inputs/day06.test"))))
+(define real-inp (string->list (string-trim (load-file "inputs/day06.inp"))))
 
 ; Modified naive search
 ; Slowly grows a substring (slice), consuming input

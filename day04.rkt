@@ -19,8 +19,8 @@
 (define input-parser
   (at-least-one pair-parser))
 
-(define test-inp (load-file-as-list "inputs/day4.test"))
-(define real-inp (load-file-as-list "inputs/day4.inp"))
+(define test-inp (load-file-as-list "inputs/day04.test"))
+(define real-inp (load-file-as-list "inputs/day04.inp"))
 
 (define (is-subrange? rng1 rng2)
   (let-values ([(a b) (apply values rng1)]

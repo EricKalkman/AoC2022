@@ -94,8 +94,8 @@
          (map (lambda (col) (dropf col (lambda (x) (eqv? x 'blank))))) ; trim off blank spaces on top
          list->vector)))
 
-(define test-inp (load-file-as-list "inputs/day5.test"))
-(define real-inp (load-file-as-list "inputs/day5.inp"))
+(define test-inp (load-file-as-list "inputs/day05.test"))
+(define real-inp (load-file-as-list "inputs/day05.inp"))
 
 (define (do-movements inp part)
   (let-values ([(_ parsed) (run-parser expect-input inp)])

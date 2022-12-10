@@ -3,8 +3,8 @@
 (require "misc.rkt")
 (require "parsecomb.rkt")
 
-(define test-inp (load-file-as-list "inputs/day2.test"))
-(define real-inp (load-file-as-list "inputs/day2.inp"))
+(define test-inp (load-file-as-list "inputs/day02.test"))
+(define real-inp (load-file-as-list "inputs/day02.inp"))
 
 (define translate (hash #\A 'rock #\B 'paper #\C 'scissors #\X 'rock #\Y 'paper #\Z 'scissors))
 

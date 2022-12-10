@@ -116,8 +116,8 @@
       expect-ls
       expect-cd)))
 
-(define test-inp (load-file-as-list "inputs/day7.test"))
-(define real-inp (load-file-as-list "inputs/day7.inp"))
+(define test-inp (load-file-as-list "inputs/day07.test"))
+(define real-inp (load-file-as-list "inputs/day07.inp"))
 
 (define (run-command-parser inp)
   (let-values ([(_ output) (expect-input inp '(() dir "/"))])

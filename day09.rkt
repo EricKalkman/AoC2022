@@ -14,9 +14,9 @@
 (define parse-input
   (at-least-one parse-command))
 
-(define test-inp (load-file-as-list "inputs/day9.test"))
-(define test-inp-2 (load-file-as-list "inputs/day9.test2"))
-(define real-inp (load-file-as-list "inputs/day9.inp"))
+(define test-inp (load-file-as-list "inputs/day09.test"))
+(define test-inp-2 (load-file-as-list "inputs/day09.test2"))
+(define real-inp (load-file-as-list "inputs/day09.inp"))
 
 (define (clamp x lo hi) (min (max x lo) hi))
 
