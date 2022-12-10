@@ -43,6 +43,7 @@
   expect-natural
   expect-int
   run-parser
+  parse-file
 
   ; sets
   DIGITS
@@ -284,7 +285,9 @@
     (format "Error when expecting ~a" lst)))
 (define (expect-string str)
   (mod-err
-    (expect-list (string->list str))
+    (and-then
+      (skip (expect-list (string->list str)))
+      (push-stack str))
     (format "Error when expecting ~a" str)))
 
 ; parses [0-9]+, and if it succeeds, pushes the parsed integer onto the stack
@@ -311,3 +314,7 @@
     (if rem
       (values rem (reverse stack))
       (values rem stack))))
+
+(define (parse-file parser fname)
+  (let-values ([(_ parsed) (run-parser parser (load-file-as-list fname))])
+    parsed))
