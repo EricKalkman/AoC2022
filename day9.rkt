@@ -18,21 +18,14 @@
 (define test-inp-2 (load-file-as-list "inputs/day9.test2"))
 (define real-inp (load-file-as-list "inputs/day9.inp"))
 
+(define (clamp x lo hi) (min (max x lo) hi))
+
 (define (move-tail tail-pos head-pos)
   (let ([head-dx (- (car head-pos) (car tail-pos))]
         [head-dy (- (cdr head-pos) (cdr tail-pos))])
-    (cond
-      [(and (<= (abs head-dx) 1) (<= (abs head-dy) 1)) tail-pos]
-      [(<= (+ (abs head-dx) (abs head-dy)) 3)
-       (cond
-         [(= 2 head-dx) `(,(sub1 (car head-pos)) . ,(cdr head-pos))]
-         [(= -2 head-dx) `(,(add1 (car head-pos)) . ,(cdr head-pos))]
-         [(= 2 head-dy) `(,(car head-pos) . ,(sub1 (cdr head-pos)))]
-         [(= -2 head-dy) `(,(car head-pos) . ,(add1 (cdr head-pos)))])]
-         ; ^^^ the lack of else here showed me (by crashing) that I forgot to handle kitty-corner cases
-         ; properly, having returned #<void>
-      [else ; move kitty-corner
-        `(,((if (= 2 head-dx) add1 sub1) (car tail-pos)) . ,((if (= 2 head-dy) add1 sub1) (cdr tail-pos)))])))
+    (if (and (<= (abs head-dx) 1) (<= (abs head-dy) 1))
+      tail-pos
+      `(,(+ (car tail-pos) (clamp head-dx -1 1)) . ,(+ (cdr tail-pos) (clamp head-dy -1 1))))))
 
 (define (move-head head-pos dir)
   (case dir
