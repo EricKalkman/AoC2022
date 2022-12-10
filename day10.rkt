@@ -28,34 +28,33 @@
               insts))
 
 ; runs instructions keeping track of a user-defined state
-; Each cycle, calls (cycle-hook cycnum regx cycle-state) to update
-; the state. cycle-hook is called before commiting the changes in the current
-; cyele to the state.
-; returns the pair `(,regx . final-state)
+; Each cycle, calls (cycle-hook cycnum regx cycle-state) to return the user-
+; defined-portion of the state. cycle-hook is called before commiting the
+; changes in the current cycle to the state.
+; returns the pair `(,regx . ,final-state)
 (define (run-insts expanded-insts init-state cycle-hook)
   (foldl (lambda (cycnum inst state)
            (let ([regx (car state)]
                  [rest-state (cdr state)])
              (cons
-               (if (list? inst)
+               (if (list? inst) ; if this is an addx instruction
                  (+ regx (second inst))
                  regx)
                (cycle-hook cycnum regx rest-state))))
-         (cons 1 init-state)
-         (range 1 (+ 1 (length expanded-insts)))
+         (cons 1 init-state) ; `(,regx . ,init-state)
+         (range 1 (+ 1 (length expanded-insts))) ; enumerate instructions
          expanded-insts))
 
 (define (part-1 parsed-inp)
   (let ([expanded-insts (expand-instructions parsed-inp)])
     (-> expanded-insts
-        ; state = list of signals
-        (run-insts '()
-                   (lambda (cycnum regx signals)
+        ; state = accumulating sum of signals
+        (run-insts 0
+                   (lambda (cycnum regx summed-signals)
                      (if (zero? (modulo (- cycnum 20) 40))
-                       (cons (* cycnum regx) signals)
-                       signals)))
-        cdr
-        sum)))
+                       (+ (* cycnum regx) summed-signals)
+                       summed-signals)))
+        cdr)))
 
 (define (sprite-visible? sprite-pos scan-pos)
   (<= (sub1 sprite-pos) scan-pos (add1 sprite-pos)))
