@@ -170,7 +170,7 @@
 
 (define (part-2 inp)
   (let-values ([(_ monkeys) (run-parser expect-input inp)])
-    (let ([ash-nagz-durbatuluuk (foldl * 1 (map monkey-mod monkeys))])
+    (let ([ash-nazg-durbatuluuk (foldl * 1 (map monkey-mod monkeys))])
       ; Ints mod n form a ring :)
       ;
       ; The worry levels quickly blow up, making the computation slow even with big integers
@@ -198,6 +198,6 @@
                  (let ([op (monkey-operation mnk)])
                    (struct-copy monkey mnk
                                 [operation (lambda (x) (modulo (op x)
-                                                               ash-nagz-durbatuluuk))])))
+                                                               ash-nazg-durbatuluuk))])))
                monkeys)
           (do-part 'part2)))))
