@@ -13,7 +13,8 @@
   vector-foldl
   vector-foldr
   any
-  all)
+  all
+  vector-update!)
 
 ; just gulp a file
 (define (load-file fname)
@@ -74,21 +75,23 @@
       (map (lambda (x) (cons (car lst1) x)) lst2)
       (cart-product (cdr lst1) lst2))))
 
-(define (vector-foldl fn seed vec)
+(define (vector-foldl fn seed vec . vecs)
   (let loop ([i 0]
              [acc seed])
     (if (>= i (vector-length vec))
       acc
       (loop (+ i 1)
-            (fn (vector-ref vec i) acc)))))
+            (apply fn (append (map (lambda (v) (vector-ref v i)) (cons vec vecs))
+                              (list acc)))))))
 
-(define (vector-foldr fn seed vec)
+(define (vector-foldr fn seed vec . vecs)
   (let loop ([i (- (vector-length vec) 1)]
              [acc seed])
     (if (< i 0)
       acc
       (loop (- i 1)
-            (fn (vector-ref vec i) acc)))))
+            (apply fn (append (map (lambda (v) (vector-ref v i)) (cons vec vecs))
+                              (list acc)))))))
 
 
 (define (any pred lst)
@@ -102,3 +105,8 @@
     [(null? lst) #t]
     [(pred (car lst)) (all pred (cdr lst))]
     [else #f]))
+
+(define (vector-update! v idx fn)
+  (let ([val (vector-ref v idx)])
+    (vector-set! v idx (fn val))
+    v))
