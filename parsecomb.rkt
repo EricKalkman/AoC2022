@@ -38,10 +38,11 @@
   expect-line
   skip-eol-or-eof
   skip-whitespace
-  expect-list
+  expect-seq
   expect-string
   expect-natural
   expect-int
+  expect-list
   run-parser
   parse-file
 
@@ -279,14 +280,14 @@
             skip-eol-or-eof
             (mod-guarded-stack reverse)))
 
-(define (expect-list lst)
+(define (expect-seq lst)
   (mod-err
     (apply and-then (map expect lst))
     (format "Error when expecting ~a" lst)))
 (define (expect-string str)
   (mod-err
     (and-then
-      (skip (expect-list (string->list str)))
+      (skip (expect-seq (string->list str)))
       (push-stack str))
     (format "Error when expecting ~a" str)))
 
@@ -307,6 +308,15 @@
                  (if (and (not (null? (cdr stack))) (eqv? (cadr stack) #\-))
                    `(,(- (car stack)) ,@(cddr stack))
                    stack)))))
+
+(define (expect-list item-parser sep-parser)
+  (group-output
+    (and-then
+      item-parser
+      (at-least-none
+        (and-then
+          (skip sep-parser)
+          item-parser)))))
 
 ; maybe more error handling here at some point, IDK
 (define (run-parser p inp)
