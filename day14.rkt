@@ -119,7 +119,7 @@
            ; we don't fall into void
            (foldl (lambda (x cave) (hash-set cave (list x floorlevel) 'wall))
                   cave
-                  (range (- 500 floorlevel 2) (+ 500 floorlevel 3)))
+                  (range (- 500 floorlevel 1) (+ 500 floorlevel 2)))
            (hash-set cave '(500 0) 'sand)
            (bfs cave (list 500 0))
            (count (lambda (x) (eqv? 'sand x))
