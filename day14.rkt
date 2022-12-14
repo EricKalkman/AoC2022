@@ -89,3 +89,38 @@
            (feed-all-the-sand cave (lambda (cave cur-x cur-y) (hash-ref cave '(500 0) #f)))
            (count (lambda (x) (eqv? 'sand x))
                   (hash-values cave)))))
+
+(define (bfs cave from)
+  (let loop ([q (list from)]
+             [cave cave])
+    (if (null? q)
+      cave
+      ; only open space is a valid neighbor
+      (let ([neighs (filter (lambda (coord) (not (hash-ref cave coord #f)))
+                            (map (lambda (x) (list x (add1 (cadar q))))
+                                 (list (sub1 (caar q)) (caar q) (add1 (caar q)))))])
+        (loop
+          (append (cdr q) neighs)
+          (apply hash-set* cave
+                 (append-map (lambda (n) (list n 'sand))
+                             neighs)))))))
+
+; wait you can just BFS part 2...
+; it'll always be a pyramid shape, and if sand is at a particular tile, it can only move
+; down or down-diagonally. The "pyramid" is essentially travelling down every path...
+(define (part-2-improved inp)
+  (let* ([cave (paint-cave (hash) inp)]
+         [floorlevel (+ 2 (foldl max 0 (map second (hash-keys cave))))])
+    (any-> cave cave
+           ; place floor as wide as the pyramid of sand that we expect
+           ; rows of sand are 2n-1 wide, extending out one tile in either direction
+           ; for each level down
+           ; So, at level 11, we expect 21 wide. Pad with 1 more on either side so that
+           ; we don't fall into void
+           (foldl (lambda (x cave) (hash-set cave (list x floorlevel) 'wall))
+                  cave
+                  (range (- 500 floorlevel 2) (+ 500 floorlevel 3)))
+           (hash-set cave '(500 0) 'sand)
+           (bfs cave (list 500 0))
+           (count (lambda (x) (eqv? 'sand x))
+                  (hash-values cave)))))
