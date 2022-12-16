@@ -40,6 +40,7 @@
   skip-whitespace
   expect-seq
   expect-string
+  skip-string
   expect-natural
   expect-int
   expect-list
@@ -290,6 +291,8 @@
       (skip (expect-seq (string->list str)))
       (push-stack str))
     (format "Error when expecting ~a" str)))
+(define (skip-string str)
+  (skip (expect-string str)))
 
 ; parses [0-9]+, and if it succeeds, pushes the parsed integer onto the stack
 (define expect-natural
