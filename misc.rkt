@@ -14,7 +14,8 @@
   vector-foldr
   any
   all
-  vector-update!)
+  vector-update!
+  alist-refv)
 
 ; just gulp a file
 (define (load-file fname)
@@ -98,7 +99,7 @@
   (cond
     [(null? lst) #f]
     [(pred (car lst)) #t]
-    [else (any pred) (cdr lst)]))
+    [else (any pred (cdr lst))]))
 
 (define (all pred lst)
   (cond
@@ -110,3 +111,6 @@
   (let ([val (vector-ref v idx)])
     (vector-set! v idx (fn val))
     v))
+
+(define (alist-refv alist x)
+  (cdr (assv x alist)))
