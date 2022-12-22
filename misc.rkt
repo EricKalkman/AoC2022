@@ -15,7 +15,11 @@
   any
   all
   vector-update!
-  alist-refv)
+  alist-refv
+  alist-upv
+  alist-setv
+  alist-keys
+  alist-values)
 
 ; just gulp a file
 (define (load-file fname)
@@ -112,5 +116,29 @@
     (vector-set! v idx (fn val))
     v))
 
-(define (alist-refv alist x)
-  (cdr (assv x alist)))
+(define (alist-refv alist k . default)
+  (cond
+    [(null? alist) (car default)]
+    [(eqv? (caar alist) k) (cdar alist)]
+    [else (apply alist-refv (cdr alist) k default)]))
+
+(define (alist-upv alist k fn . default)
+  (cond
+    [(null? alist) (list (cons k (fn (car default))))]
+    [(eqv? (caar alist) k) (cons
+                             (cons k (fn (cdar alist)))
+                             (cdr alist))]
+    [else (cons (car alist)
+                (apply alist-upv (cdr alist) k fn default))]))
+
+(define (alist-setv alist k v)
+  (cond
+    [(null? alist) (list (cons k v))]
+    [(eqv? (caar alist) k) (cons
+                             (cons k v)
+                             (cdr alist))]
+    [else (cons (car alist)
+                (alist-setv (cdr alist) k v))]))
+
+(define (alist-keys alist) (map car alist))
+(define (alist-values alist) (map cdr alist))
