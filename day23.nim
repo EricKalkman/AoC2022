@@ -67,7 +67,7 @@ proc doRound(elfs: var IntSet; round: Natural) =
       continue
     # try moving N, S, W, or E (in whatever is prescribed for the round)
     for check_dir in DIR_SELECT[round mod 4]:
-      # if there is a neighbor in the current trial direction
+      # if there is no neighbor elf in the current trial direction
       if not anyIt(GENERAL_DIRS[check_dir], neighbors[it].toInt in elfs):
         # keep track of the proposal
         prev_map.mgetOrPut(neighbors[check_dir].toInt, @[]).add elf
