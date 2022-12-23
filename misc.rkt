@@ -16,6 +16,7 @@
   all
   vector-update!
   alist-refv
+  alist-reference
   alist-upv
   alist-setv
   alist-keys
@@ -121,6 +122,12 @@
     [(null? alist) (car default)]
     [(eqv? (caar alist) k) (cdar alist)]
     [else (apply alist-refv (cdr alist) k default)]))
+
+(define (alist-reference alist k . default)
+  (cond
+    [(null? alist) (car default)]
+    [(equal? (caar alist) k) (cdar alist)]
+    [else (apply alist-reference (cdr alist) k default)]))
 
 (define (alist-upv alist k fn . default)
   (cond
