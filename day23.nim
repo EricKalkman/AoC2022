@@ -10,7 +10,6 @@ import tables
 # with the intsets module
 
 type
-  Tile = enum tEmpty, tElf
   Coord = tuple[row: int32, col: int32]
   Direction = enum NW, N, NE, W, E, SW, S, SE
 
