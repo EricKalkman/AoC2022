@@ -39,7 +39,9 @@ func getNeighbors(coord: Coord): array[Direction, Coord] =
         result[idx.Direction] = (row, col)
         inc idx
 
-proc doRound(elfs: var IntSet; round: Natural) =
+proc doRound(elfs: var IntSet; round: Natural): bool =
+  # returns whether any update was performed
+  result = true
   ## LOOKUP TABLES
   # table representing the neighbors that we need to check in order to move
   # in that direction. Only matters for cardinal directions; non-cardinal
@@ -79,6 +81,7 @@ proc doRound(elfs: var IntSet; round: Natural) =
       #  prop_pos.toCoord.row, ", ", prop_pos.toCoord.col
       elfs.excl proposing_elfs[0]
       elfs.incl prop_pos
+      result = false
 
 # get the rectangular box around the elfs
 func getBoundingBox(elfs: IntSet): tuple[minrow: int32, mincol: int32, maxrow: int32, maxcol: int32] =
@@ -115,23 +118,16 @@ when isMainModule:
     echo "Starting board:"
     echo elf_coords
     for round in 0 .. 9:
-      elf_coords.doRound(round)
+      discard elf_coords.doRound(round)
     echo "Board after 10 rounds:"
     echo elf_coords
     echo "Part 1: ", elf_coords.numOpenTiles, "\n"
 
     var round = 0
     elf_coords = parseInput(paramStr(1))
-    while true:
-      # keep track of the current state
-      var old_coords : IntSet
-      old_coords.assign(elf_coords)
-      # update positions
-      elf_coords.doRound(round)
+    while not elf_coords.doRound(round):
       inc round
-      # if no positions changed, then we're done
-      if elf_coords == old_coords:
-        break
+    inc round
 
     echo "Final board:"
     echo elf_coords
