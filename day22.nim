@@ -126,16 +126,17 @@ import tables
 
 type
   FacePlane = enum xy, xz, yz
-  FaceNormal = enum normX, normY, normZ, normNX, normNY, normNZ
+  Direction3D = enum normX, normY, normZ, normNX, normNY, normNZ
   Face = object
     coord                  : Coord
     prev_coord             : Coord
-    normal                 : FaceNormal
-    updir, rightdir        : FaceNormal
+    normal                 : Direction3D
+    updir, rightdir        : Direction3D
+  CubeFaces = array[Direction3D, Face] # keyed by normal
 
 import deques
 
-proc rotateX90(dir: FaceNormal): FaceNormal =
+proc rotateX90(dir: Direction3D): Direction3D =
   case dir
   of normX: normX
   of normY: normZ
@@ -143,9 +144,9 @@ proc rotateX90(dir: FaceNormal): FaceNormal =
   of normNX: normNX
   of normNY: normNZ
   of normNZ: normY
-proc rotateNX90(dir: FaceNormal): FaceNormal =
+proc rotateNX90(dir: Direction3D): Direction3D =
   dir.rotateX90.rotateX90.rotateX90
-proc rotateY90(dir: FaceNormal): FaceNormal =
+proc rotateY90(dir: Direction3D): Direction3D =
   case dir
   of normX: normNZ
   of normY: normY
@@ -153,19 +154,19 @@ proc rotateY90(dir: FaceNormal): FaceNormal =
   of normNX: normZ
   of normNY: normNY
   of normNZ: normNX
-proc rotateNY90(dir: FaceNormal): FaceNormal =
+proc rotateNY90(dir: Direction3D): Direction3D =
   dir.rotateY90.rotateY90.rotateY90
 
-proc `-`(dir: FaceNormal): FaceNormal =
+proc `-`(dir: Direction3D): Direction3D =
   case dir
   of normX: normNX
   of normY: normNY
   of normZ: normNZ
-  of normNX: normNX
-  of normNY: normNY
-  of normNZ: normNZ
+  of normNX: normX
+  of normNY: normY
+  of normNZ: normZ
 
-proc rotate90Along(dir, axis: FaceNormal): FaceNormal =
+proc rotate90Along(dir, axis: Direction3D): Direction3D =
   case dir
   of normX:
     case axis
@@ -212,13 +213,13 @@ proc rotate90Along(dir, axis: FaceNormal): FaceNormal =
 
 
 # BFS trace of faces
-proc traceNet(m: Map; start: Coord; face_len: int = 50): tuple[faces: seq[Face], prevs: Table[Coord, Coord]] =
+proc traceNet(m: Map; start: Coord; face_len: int = 50): tuple[faces: CubeFaces, prevs: Table[Coord, Coord]] =
   result.prevs = initTable[Coord, Coord]()
-  result.faces = @[]
+  #result.faces = @[]
   var q = Deque[Face]()
   q.addLast Face(coord: start, normal: normNZ, updir: normNY, rightdir: normX)
   result.prevs[q.peekFirst.coord] = q.peekFirst.coord
-  result.faces.add q.peekFirst
+  result.faces[normNZ] = q.peekFirst
   while q.len > 0:
     let cur = q.popFirst
     let (row, col) = cur.coord
@@ -237,10 +238,165 @@ proc traceNet(m: Map; start: Coord; face_len: int = 50): tuple[faces: seq[Face],
                             normal: nnorm,
                             updir: nupdir,
                             rightdir: nrdir)
-        result.faces.add new_face
+        result.faces[new_face.normal] = new_face
         result.prevs[new_face.coord] = cur.coord
         q.addLast new_face
 
+
+func to3D(dir: Heading; up, right: Direction3D): Direction3D =
+  case dir
+  of East: right
+  of South: -up
+  of West: -right
+  of North: up
+
+func to2D(dir: Direction3D; up, right: Direction3D): Heading =
+  if dir == up:
+    North
+  elif dir == -up:
+    South
+  elif dir == right:
+    East
+  #elif dir == -right:
+  else:
+    West
+
+proc transitionFace(m: Map; faces: CubeFaces; cur_face: Direction3D; row, col: int; dir: Heading; face_size: Natural):
+    tuple[row: int, col: int, dir: Heading] =
+  let face = faces[cur_face]
+  let (rotate_axis, next_normal, edge_coord) = (case dir
+    of North:
+      let rotate_axis = -face.rightdir
+      let next_face_norm = cur_face.rotate90Along(rotate_axis)
+      var coord = col-face.coord.col
+      # if not(N edge of cur == S edge of next or N edge of cur == W edge of next)
+      if not(faces[next_face_norm].rightdir == face.rightdir or -faces[next_face_norm].updir == face.rightdir):
+        coord = (face_size - 1) - coord
+      (rotate_axis, next_face_norm, coord)
+    of East:
+      let rotate_axis = face.updir
+      let next_face_norm = cur_face.rotate90Along(rotate_axis)
+      var coord = row - face.coord.row
+      # if not(E edge of cur == W edge of next or E edge of cur == S edge of next)
+      if not(faces[next_face_norm].updir == face.updir or -faces[next_face_norm].rightdir == face.updir):
+        coord = (face_size - 1) - coord
+      (face.updir, next_face_norm, coord)
+    of South:
+      let rotate_axis = face.rightdir
+      let next_face_norm = cur_face.rotate90Along(rotate_axis)
+      var coord = col - face.coord.col
+      # if not(S edge of cur == N edge of next or S edge of cur == E edge of next)
+      if not(face.rightdir == faces[next_face_norm].rightdir or face.right_dir == -faces[next_face_norm].updir):
+        coord = (face_size - 1) - coord
+      (rotate_axis, next_face_norm, coord)
+    of West:
+      let rotate_axis = -face.updir
+      let next_face_norm = cur_face.rotate90along(rotate_axis)
+      var coord = row - face.coord.row
+      # if not(W edge of cur == E edge of next or W edge of cur == N edge of next
+      if not(face.updir == faces[next_face_norm].updir or face.updir == -faces[next_face_norm].rightdir):
+        coord = (face_size - 1) - coord
+      (rotate_axis, next_face_norm, coord))
+
+  let next_face = faces[next_normal]
+  result.dir = dir.to3D(face.updir, face.rightdir)
+                  .rotate90Along(rotate_axis)
+                  .to2D(next_face.updir, next_face.rightdir)
+  # negative edge coordinate indicates that it needs to be inverted
+  case result.dir
+  of North: # we're heading north, so we're on the south edge
+    result.row = next_face.coord.row + face_size-1
+    result.col = next_face.coord.col + edge_coord
+  of East: # we're on the W edge
+    result.row = next_face.coord.row + edge_coord
+    result.col = next_face.coord.col
+  of South: # we're on the N edge
+    result.row = next_face.coord.row
+    result.col = next_face.coord.col + edge_coord
+  of West: # we're on the E edge
+    result.row = next_face.coord.row + edge_coord
+    result.col = next_face.coord.col + face_size-1
+
+
+#proc transitionFace(m: Map; faces: CubeFaces; cur_face: Direction3D; row, col: int; dir: Heading; face_size: Natural):
+#    tuple[row: int, col: int, dir: Heading] =
+
+
+func determineFace(faces: CubeFaces; row, col: int; face_size: Natural): Direction3D =
+  for dir, face in faces:
+    if row in face.coord.row .. face.coord.row + face_size-1 and
+        col in face.coord.col .. face.coord.col + face_size-1:
+      return dir
+  assert(false, "Coordinate not found in face: " & $(row: row, col: col))
+
+proc advance2(m: Map; faces: CubeFaces; row, col: int; dir: Heading;
+              face_size: Natural): tuple[row: int, col: int, dir: Heading] =
+  case dir
+  of East:
+    var (row, col) = (row, col+1)
+    var dir = dir
+    if col >= m[row].len or m[row][col] == ' ':
+      dec col
+      let cur_face = determineFace(faces, row, col, face_size)
+      (row, col, dir) = m.transitionFace(faces, cur_face, row, col, dir, face_size)
+    result = (row, col, dir)
+  of South:
+    var (row, col) = (row+1, col)
+    var dir = dir
+    if row >= m.len or m[row][col] == ' ':
+      dec row
+      let cur_face = determineFace(faces, row, col, face_size)
+      (row, col, dir) = m.transitionFace(faces, cur_face, row, col, dir, face_size)
+    result = (row, col, dir)
+  of West:
+    var (row, col) = (row, col-1)
+    var dir = dir
+    if col < 0 or m[row][col] == ' ':
+      inc col
+      let cur_face = determineFace(faces, row, col, face_size)
+      (row, col, dir) = m.transitionFace(faces, cur_face, row, col, dir, face_size)
+    result = (row, col, dir)
+  of North:
+    var (row, col) = (row-1, col)
+    var dir = dir
+    if row < 0 or m[row][col] == ' ':
+      inc row
+      let cur_face = determineFace(faces, row, col, face_size)
+      (row, col, dir) = m.transitionFace(faces, cur_face, row, col, dir, face_size)
+    result = (row, col, dir)
+  if m[result.row][result.col] == '#':
+    return (row, col, dir)
+  else:
+    return result
+
+
+proc doRounds2(m: Map; row, col: int; dir: Heading; cmds: seq[Command],
+               faces: CubeFaces; face_size: Natural = 50): tuple[row: int, col: int, dir: Heading] =
+  const ROTATE_DIRS: array[Heading, array[RotateDirection, Heading]] = [
+    East: [rdCW: South, rdCCW: North],
+    South: [rdCW: West, rdCCW: East],
+    West: [rdCW: North, rdCCW: South],
+    North: [rdCW: East, rdCCW: West]
+  ]
+  result = (row, col, dir)
+  var cmds = cmds
+  var idx = 0
+  while idx < cmds.len:
+    case cmds[idx].kind
+    of ckMove:
+      if cmds[idx].steps == 0:
+        inc idx
+      else:
+        let new_rc = advance2(m, faces, result.row, result.col, result.dir, face_size)
+        result.row = new_rc.row
+        result.col = new_rc.col
+        result.dir = new_rc.dir
+        dec cmds[idx].steps
+    of ckRotate:
+      result.dir = ROTATE_DIRS[result.dir][cmds[idx].rot_dir]
+      inc idx
+
+# proc transitionFace(m: Map; faces: CubeFaces; cur_face: Direction3D; row, col: int; dir: Heading; face_size: Natural):
 
 when isMainModule:
   proc main =
@@ -252,9 +408,14 @@ when isMainModule:
     echo "Final dir: ", final_dir
     echo "Part 1 result: ", 1000 * (1+final_row) + 4 * (1+final_col) + final_dir.ord
 
-    let (faces, prevs) = traceNet(m, (row, col))
-    for face in faces:
-      echo face
+    let (faces, prevs) = traceNet(m, (row, col), 50)
+    for norm, face in faces:
+      echo norm, ": ", face
+    echo ""
 
+    let (final_row2, final_col2, final_dir2) = doRounds2(m, row, col, East, cmds, faces, 50)
+    echo final_row2, ", ", final_col2
+    echo final_dir2
+    echo "Part 2 result: ", 1000 * (1+final_row2) + 4 * (1+final_col2) + final_dir2.ord
 
   main()
