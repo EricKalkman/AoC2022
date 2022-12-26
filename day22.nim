@@ -122,10 +122,11 @@ proc doRounds(m: Map; row, col: int; dir: Heading; cmds: seq[Command]): tuple[ro
 proc getStartingPosition(m: Map): tuple[row: int, col: int] =
   while m[0][result.col] != '.': inc result.col
 
+
+# -- PART 2 METHODS --
 import tables
 
 type
-  FacePlane = enum xy, xz, yz
   Direction3D = enum normX, normY, normZ, normNX, normNY, normNZ
   Face = object
     coord                  : Coord
@@ -136,27 +137,6 @@ type
 
 import deques
 
-proc rotateX90(dir: Direction3D): Direction3D =
-  case dir
-  of normX: normX
-  of normY: normZ
-  of normZ: normNY
-  of normNX: normNX
-  of normNY: normNZ
-  of normNZ: normY
-proc rotateNX90(dir: Direction3D): Direction3D =
-  dir.rotateX90.rotateX90.rotateX90
-proc rotateY90(dir: Direction3D): Direction3D =
-  case dir
-  of normX: normNZ
-  of normY: normY
-  of normZ: normX
-  of normNX: normZ
-  of normNY: normNY
-  of normNZ: normNX
-proc rotateNY90(dir: Direction3D): Direction3D =
-  dir.rotateY90.rotateY90.rotateY90
-
 proc `-`(dir: Direction3D): Direction3D =
   case dir
   of normX: normNX
@@ -166,7 +146,12 @@ proc `-`(dir: Direction3D): Direction3D =
   of normNY: normY
   of normNZ: normZ
 
+# rotate the vector `dir` around the axis defined by the direction `axis`
+# respects the sign of axis according to the right-hand rule
 proc rotate90Along(dir, axis: Direction3D): Direction3D =
+  # yeah, this could be a lookup table
+  # yeah, this was very typo-prone to write out
+  # no, I will not implement linear algebra ops for this problem
   case dir
   of normX:
     case axis
@@ -213,36 +198,43 @@ proc rotate90Along(dir, axis: Direction3D): Direction3D =
 
 
 # BFS trace of faces
-proc traceNet(m: Map; start: Coord; face_len: int = 50): tuple[faces: CubeFaces, prevs: Table[Coord, Coord]] =
-  result.prevs = initTable[Coord, Coord]()
-  #result.faces = @[]
+# Returns an array containing the `Face` for each cube face. `Face`s are identified by their normal
+# vector (a `Direction3D`)
+proc traceNet(m: Map; start: Coord; face_len: Natural = 50): CubeFaces =
+  var prevs = initTable[Coord, Coord]()
   var q = Deque[Face]()
   q.addLast Face(coord: start, normal: normNZ, updir: normNY, rightdir: normX)
-  result.prevs[q.peekFirst.coord] = q.peekFirst.coord
-  result.faces[normNZ] = q.peekFirst
+  prevs[q.peekFirst.coord] = q.peekFirst.coord
+  result[normNZ] = q.peekFirst
   while q.len > 0:
     let cur = q.popFirst
     let (row, col) = cur.coord
     let norm = cur.normal
     let updir = cur.updir
     let rdir = cur.rightdir
+    # neighbor coord, neighbor normal, neighbor updir, neighbor rightdir
+    # `Direction3D`s are calculated relative to the current `Face`'s directions using the
+    # above-defined rotation procedures
+    # "up" is the local North, "right" is the local "East"
     for neighbor_coord, nnorm, nupdir, nrdir in
         [((row: row+face_len, col: col), rotate90Along(norm, rdir), rotate90Along(updir, rdir), rdir),
          ((row: row-face_len, col: col), rotate90Along(norm, -rdir), rotate90Along(updir, -rdir), rdir),
          ((row: row, col: col+face_len), rotate90Along(norm, updir), updir, rotate90Along(rdir, updir)),
          ((row: row, col: col-face_len), rotate90Along(norm, -updir), updir, rotate90along(rdir, -updir))].items:
+      # if the neighbor is in bounds, not visited, and not empty space
       if neighbor_coord.row in 0 .. m.high and neighbor_coord.col in 0 .. m[0].high and
-          not result.prevs.hasKey(neighbor_coord) and m[neighbor_coord.row][neighbor_coord.col] != ' ':
+          not prevs.hasKey(neighbor_coord) and m[neighbor_coord.row][neighbor_coord.col] != ' ':
         let new_face = Face(coord: neighbor_coord,
                             prev_coord: cur.coord,
                             normal: nnorm,
                             updir: nupdir,
                             rightdir: nrdir)
-        result.faces[new_face.normal] = new_face
-        result.prevs[new_face.coord] = cur.coord
+        result[new_face.normal] = new_face
+        prevs[new_face.coord] = cur.coord
         q.addLast new_face
 
-
+# Given the face-local NSEW direction `dir` and that face's 3D North ("up") and East ("right")
+# directions, calculate the 3D direction of the `dir`
 func to3D(dir: Heading; up, right: Direction3D): Direction3D =
   case dir
   of East: right
@@ -250,6 +242,7 @@ func to3D(dir: Heading; up, right: Direction3D): Direction3D =
   of West: -right
   of North: up
 
+# Convert a 3D direction to a face's NSEW coordinates
 func to2D(dir: Direction3D; up, right: Direction3D): Heading =
   if dir == up:
     North
@@ -261,9 +254,16 @@ func to2D(dir: Direction3D; up, right: Direction3D): Heading =
   else:
     West
 
+# Called when we cross an edge. Returns the (row, col) position on the net and the new heading
+# resulting from moving to a new face
+# row, col should be the coordinates *on the edge* (not beyond) of the face pre-crossing
 proc transitionFace(m: Map; faces: CubeFaces; cur_face: Direction3D; row, col: int; dir: Heading; face_size: Natural):
     tuple[row: int, col: int, dir: Heading] =
   let face = faces[cur_face]
+  # axis to rotate around when crossing the edge, the normal of the face we're moving to,
+  # and the distance along the edge. Coordinates are ascending E->W and N->S for each face, and
+  # thus the edge coordinate of the current face may be (edge_len - edge_coord) on the second
+  # face
   let (rotate_axis, next_normal, edge_coord) = (case dir
     of North:
       let rotate_axis = -face.rightdir
@@ -318,10 +318,7 @@ proc transitionFace(m: Map; faces: CubeFaces; cur_face: Direction3D; row, col: i
     result.col = next_face.coord.col + face_size-1
 
 
-#proc transitionFace(m: Map; faces: CubeFaces; cur_face: Direction3D; row, col: int; dir: Heading; face_size: Natural):
-#    tuple[row: int, col: int, dir: Heading] =
-
-
+# Determine which face the net coordinates (row, col) are on
 func determineFace(faces: CubeFaces; row, col: int; face_size: Natural): Direction3D =
   for dir, face in faces:
     if row in face.coord.row .. face.coord.row + face_size-1 and
@@ -329,15 +326,20 @@ func determineFace(faces: CubeFaces; row, col: int; face_size: Natural): Directi
       return dir
   assert(false, "Coordinate not found in face: " & $(row: row, col: col))
 
+# Attempt to move "forward" on the cube from row, col heading in dir
+# Will transition between faces if necessary
 proc advance2(m: Map; faces: CubeFaces; row, col: int; dir: Heading;
               face_size: Natural): tuple[row: int, col: int, dir: Heading] =
   case dir
   of East:
     var (row, col) = (row, col+1)
     var dir = dir
+    # if we're no longer on the current face
     if col >= m[row].len or m[row][col] == ' ':
+      # backtrack one space
       dec col
       let cur_face = determineFace(faces, row, col, face_size)
+      # attempt to move to the next face
       (row, col, dir) = m.transitionFace(faces, cur_face, row, col, dir, face_size)
     result = (row, col, dir)
   of South:
@@ -384,8 +386,7 @@ proc doRounds2(m: Map; row, col: int; dir: Heading; cmds: seq[Command],
   while idx < cmds.len:
     case cmds[idx].kind
     of ckMove:
-      if cmds[idx].steps == 0:
-        inc idx
+      if cmds[idx].steps == 0: inc idx
       else:
         let new_rc = advance2(m, faces, result.row, result.col, result.dir, face_size)
         result.row = new_rc.row
@@ -395,8 +396,6 @@ proc doRounds2(m: Map; row, col: int; dir: Heading; cmds: seq[Command],
     of ckRotate:
       result.dir = ROTATE_DIRS[result.dir][cmds[idx].rot_dir]
       inc idx
-
-# proc transitionFace(m: Map; faces: CubeFaces; cur_face: Direction3D; row, col: int; dir: Heading; face_size: Natural):
 
 when isMainModule:
   proc main =
@@ -408,7 +407,7 @@ when isMainModule:
     echo "Final dir: ", final_dir
     echo "Part 1 result: ", 1000 * (1+final_row) + 4 * (1+final_col) + final_dir.ord
 
-    let (faces, prevs) = traceNet(m, (row, col), 50)
+    let faces = traceNet(m, (row, col), 50)
     for norm, face in faces:
       echo norm, ": ", face
     echo ""
@@ -418,4 +417,4 @@ when isMainModule:
     echo final_dir2
     echo "Part 2 result: ", 1000 * (1+final_row2) + 4 * (1+final_col2) + final_dir2.ord
 
-  main()
+  main() # nice
